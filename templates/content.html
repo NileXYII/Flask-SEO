@@ -5,32 +5,588 @@
     <a href="{{ url_for('home') }}">Home</a> / <span>Guide</span>
   </nav>
 
-  <h1 class="headline">How to add SEO meta tags to a Flask app</h1>
+  <h1 class="headline">The complete guide to SEO meta tags in Flask</h1>
   <p class="meta">
     By {{ seo.author }} &middot;
-    <time datetime="{{ seo.published }}">{{ seo.published }}</time>
+    <time datetime="{{ seo.published }}">{{ seo.published }}</time> &middot; 15 min read
   </p>
 
   <p class="lead">
-    Every page needs a unique title, description and canonical URL. Flask makes this easy
-    when the values live in one dictionary and one template partial renders them.
+    Search engines and social networks decide how your pages look in results and link previews
+    from a handful of tags in the <code>&lt;head&gt;</code>. This guide explains every tag a
+    Flask site needs, why it matters, how long it should be, and how to generate all of it from
+    one Jinja2 partial so you never copy and paste it twice.
   </p>
 
-  <h2>1. Describe the page</h2>
-  <p>Create a <code>seo</code> dict in your route and pass it to <code>render_template</code>.</p>
-<pre><code>return render_template("home.html", seo={
-    "title": "My page",
-    "description": "A 120-155 character summary.",
-    "path": "/my-page",
-})</code></pre>
+  <nav class="toc" aria-label="Table of contents">
+    <strong>In this guide</strong>
+    <ol>
+      <li><a href="#why">Why meta tags matter</a></li>
+      <li><a href="#anatomy">Anatomy of a well-built head</a></li>
+      <li><a href="#title">Title tags</a></li>
+      <li><a href="#description">Meta descriptions</a></li>
+      <li><a href="#canonical">Canonical URLs</a></li>
+      <li><a href="#robots">Robots directives</a></li>
+      <li><a href="#open-graph">Open Graph</a></li>
+      <li><a href="#twitter">Twitter / X cards</a></li>
+      <li><a href="#json-ld">Structured data (JSON-LD)</a></li>
+      <li><a href="#flask-setup">Setting it up in Flask</a></li>
+      <li><a href="#sitemap">Sitemap and robots.txt</a></li>
+      <li><a href="#vercel">Deploying on Vercel</a></li>
+      <li><a href="#mistakes">Common mistakes</a></li>
+      <li><a href="#testing">Testing and validation</a></li>
+      <li><a href="#checklist">Pre-launch checklist</a></li>
+      <li><a href="#faq">Frequently asked questions</a></li>
+    </ol>
+  </nav>
 
-  <h2>2. Include the partial</h2>
-  <p>Add <code>{% raw %}{% include "_seo.html" %}{% endraw %}</code> inside <code>&lt;head&gt;</code> of your base template.</p>
+{% raw %}
+  <h2 id="why">1. Why meta tags matter</h2>
+  <p>
+    Meta tags are small pieces of HTML in the <code>&lt;head&gt;</code> that describe a page to
+    machines. They do not appear on the page itself, but they control three things you care about.
+  </p>
+  <ul>
+    <li><strong>How you appear in search results.</strong> The title tag and meta description usually become the blue headline and the snippet under it.</li>
+    <li><strong>How links look when shared.</strong> Open Graph and Twitter tags decide the preview card on Facebook, LinkedIn, WhatsApp, Discord, Slack and X.</li>
+    <li><strong>Which URL counts.</strong> Canonical and robots tags tell crawlers which version of a page to index and which pages to leave alone.</li>
+  </ul>
+  <p>
+    Be realistic about what they do. Meta tags are not a ranking cheat code. Good titles and
+    descriptions mostly improve click-through rate, and clean canonicals prevent duplicate-content
+    confusion. Rankings still come from useful content, fast pages and links from other sites.
+    Treat meta tags as the foundation that stops you losing traffic, not as a growth hack.
+  </p>
+  <div class="callout">
+    <p><strong>Rule of thumb:</strong> every indexable page needs its own title, its own description and a canonical URL. Everything else builds on that.</p>
+  </div>
 
-  <h2>3. Add structured data</h2>
-  <p>Pass a <code>schema</code> dict and the partial emits it as JSON-LD.</p>
+  <h2 id="anatomy">2. Anatomy of a well-built head</h2>
+  <p>This is the minimum head for a page that should rank and share well. The rest of the guide explains each line.</p>
+<pre><code>&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
 
-  <h2>4. Publish a sitemap</h2>
-  <p>Serve <code>/sitemap.xml</code> and <code>/robots.txt</code> so crawlers can find every page.</p>
+&lt;title&gt;The complete guide to SEO meta tags in Flask | Acme Studio&lt;/title&gt;
+&lt;meta name="description" content="Learn every SEO meta tag a Flask site needs..."&gt;
+&lt;link rel="canonical" href="https://example.com/guide/flask-seo-meta-tags"&gt;
+&lt;meta name="robots" content="index, follow, max-image-preview:large"&gt;
+
+&lt;meta property="og:type" content="article"&gt;
+&lt;meta property="og:title" content="The complete guide to SEO meta tags in Flask"&gt;
+&lt;meta property="og:description" content="Learn every SEO meta tag..."&gt;
+&lt;meta property="og:url" content="https://example.com/guide/flask-seo-meta-tags"&gt;
+&lt;meta property="og:image" content="https://example.com/img/og-default.png"&gt;
+
+&lt;meta name="twitter:card" content="summary_large_image"&gt;
+
+&lt;script type="application/ld+json"&gt;{ ...structured data... }&lt;/script&gt;</code></pre>
+  <p>Here is a quick reference for the tags covered in this guide.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Tag</th><th>Purpose</th><th>Recommended</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>&lt;title&gt;</code></td><td>Headline in search results and browser tabs</td><td>50-60 characters, unique per page</td></tr>
+        <tr><td><code>meta description</code></td><td>Snippet under the headline</td><td>120-160 characters, unique per page</td></tr>
+        <tr><td><code>link rel="canonical"</code></td><td>Declares the preferred URL</td><td>Absolute URL, one per page</td></tr>
+        <tr><td><code>meta robots</code></td><td>Index and follow rules</td><td><code>index, follow</code> by default</td></tr>
+        <tr><td><code>og:*</code></td><td>Link previews on social platforms</td><td>Title, description, url, image, type</td></tr>
+        <tr><td><code>twitter:*</code></td><td>Card style on X</td><td><code>summary_large_image</code></td></tr>
+        <tr><td>JSON-LD</td><td>Structured data for rich results</td><td>Match what is visible on the page</td></tr>
+        <tr><td><code>theme-color</code></td><td>Browser UI colour on mobile</td><td>Match your brand, light and dark</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="title">3. Title tags</h2>
+  <p>
+    The title tag is the single most important on-page tag. It is the headline users click in
+    search results, the label on the browser tab and the default text when someone bookmarks or
+    shares the page.
+  </p>
+  <h3>How to write a good title</h3>
+  <ul>
+    <li><strong>Keep it around 50-60 characters.</strong> Google truncates by pixel width, not characters, so around 600 pixels is the real limit. Wide letters like W and M use up room faster.</li>
+    <li><strong>Lead with the topic.</strong> Put the words people search for near the start, then the brand at the end.</li>
+    <li><strong>Make every title unique.</strong> Duplicate titles across pages make it hard for search engines to tell them apart.</li>
+    <li><strong>Write for humans first.</strong> "Flask SEO guide: meta tags, Open Graph and JSON-LD" beats "Flask SEO | SEO Flask | Flask Meta Tags".</li>
+    <li><strong>Skip keyword stuffing.</strong> Search engines may rewrite a spammy title anyway.</li>
+  </ul>
+  <h3>Brand suffix pattern</h3>
+  <p>
+    A consistent pattern is <code>Page title | Brand</code>. The partial in this project appends the
+    site name automatically on every page except the homepage, where the brand is already in the
+    title. Because the brand sits at the end, a truncated title loses the brand, not the topic.
+  </p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Page type</th><th>Pattern</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Homepage</td><td>Brand: value proposition</td><td>Acme Studio: Fast, accessible web projects</td></tr>
+        <tr><td>Article</td><td>Topic | Brand</td><td>Flask SEO meta tags guide | Acme Studio</td></tr>
+        <tr><td>About</td><td>About us | Brand</td><td>About us | Acme Studio</td></tr>
+        <tr><td>Error page</td><td>Short message | Brand</td><td>Page not found | Acme Studio</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="description">4. Meta descriptions</h2>
+  <p>
+    The meta description is a short summary of the page. Google does not use it as a ranking
+    signal, and it may replace it with text from the page if it thinks that matches the search
+    better. It is still worth writing carefully, because a clear description earns clicks and it is
+    reused as the preview text on social platforms when no Open Graph description exists.
+  </p>
+  <h3>Guidelines</h3>
+  <ul>
+    <li>Aim for <strong>120-160 characters</strong>. Longer text gets cut off with an ellipsis.</li>
+    <li>Describe what the reader gets, in plain language, and include the main topic naturally.</li>
+    <li>Use an active voice and, where it fits, a gentle call to action such as "Learn", "Compare" or "Get the code".</li>
+    <li>Never reuse one description across pages. If you cannot write a unique one, it is better to let the search engine generate it.</li>
+    <li>Do not use double quotes inside the value. Jinja2 escapes them for you, but they still look ugly when truncated.</li>
+  </ul>
+  <h3>Before and after</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Weak</th><th>Stronger</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Welcome to our website. We are a company that does many things. Click to learn more.</td>
+          <td>Acme Studio builds fast, accessible Flask web apps with Material Design 3. Explore guides, tools and case studies.</td>
+        </tr>
+        <tr>
+          <td>SEO, meta tags, Flask, tags, Jinja2, search engine optimization</td>
+          <td>Learn every SEO meta tag a Flask site needs, from titles to JSON-LD, with copy-paste code.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <p><strong>About the keywords meta tag:</strong> Google has ignored <code>meta name="keywords"</code> for years, and other engines give it little or no weight. It is harmless but optional. Do not spend time on it.</p>
+  </div>
+
+  <h2 id="canonical">5. Canonical URLs</h2>
+  <p>
+    The same page can often be reached through several URLs: with and without a trailing slash,
+    with tracking parameters like <code>?utm_source=newsletter</code>, over HTTP and HTTPS, or on
+    a preview domain and a production domain. A canonical tag tells search engines which one is
+    the main version so ranking signals are consolidated instead of split.
+  </p>
+<pre><code>&lt;link rel="canonical" href="https://example.com/about"&gt;</code></pre>
+  <h3>Rules that prevent trouble</h3>
+  <ul>
+    <li>Always use an <strong>absolute URL</strong> including the scheme and domain.</li>
+    <li>Use <strong>one canonical per page</strong>, and make it point to a URL that returns a 200 status.</li>
+    <li>Make it <strong>self-referencing</strong> on normal pages: the canonical of <code>/about</code> is <code>/about</code>.</li>
+    <li>Pick one convention for trailing slashes and www versus non-www, then stick to it everywhere, including the sitemap and internal links.</li>
+    <li>Do not canonicalise paginated pages to page one. Each page in a series should point to itself.</li>
+    <li>The canonical is a strong hint, not a command. Search engines can ignore it if signals conflict.</li>
+  </ul>
+  <p>
+    In this project the canonical is built from the <code>SITE_URL</code> setting plus the page
+    <code>path</code>. Query strings are never included, which is exactly what you want.
+  </p>
+
+  <h2 id="robots">6. Robots directives</h2>
+  <p>
+    The robots meta tag controls indexing for a single page. It is separate from
+    <code>robots.txt</code>, which controls crawling for the whole site. Getting the difference
+    right matters because mixing them up is one of the most common SEO accidents.
+  </p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Directive</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>index</code> / <code>noindex</code></td><td>Allow or block the page from appearing in results</td></tr>
+        <tr><td><code>follow</code> / <code>nofollow</code></td><td>Allow or block following links on the page</td></tr>
+        <tr><td><code>max-image-preview:large</code></td><td>Allow large image previews in search and Discover</td></tr>
+        <tr><td><code>max-snippet:-1</code></td><td>No limit on snippet length</td></tr>
+        <tr><td><code>noarchive</code></td><td>Do not show a cached copy</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>When to use noindex</h3>
+  <ul>
+    <li>Thank-you pages, internal search results and filtered list views with no unique value.</li>
+    <li>Login, account, checkout and admin pages.</li>
+    <li>Staging, preview and development deployments.</li>
+    <li>Error pages. This project sets <code>noindex, nofollow</code> on the 404 page.</li>
+  </ul>
+  <div class="callout">
+    <p><strong>Important:</strong> if a page is blocked in <code>robots.txt</code>, crawlers cannot fetch it and therefore never see its <code>noindex</code> tag. To remove a page from results, allow crawling and use <code>noindex</code>. Use <code>robots.txt</code> only to save crawl budget on sections you do not care about.</p>
+  </div>
+  <p>
+    Non-HTML files such as PDFs cannot carry a meta tag. For those, send the equivalent HTTP
+    header, <code>X-Robots-Tag: noindex</code>. The project uses this same header to keep Vercel
+    preview deployments out of search.
+  </p>
+
+  <h2 id="open-graph">7. Open Graph</h2>
+  <p>
+    Open Graph was created by Facebook and is now read by almost every platform that renders link
+    previews: LinkedIn, WhatsApp, Telegram, Slack, Discord, iMessage and many more. Without it,
+    platforms guess a title and image, and the guess is often poor.
+  </p>
+  <h3>The tags you need</h3>
+<pre><code>&lt;meta property="og:site_name" content="Acme Studio"&gt;
+&lt;meta property="og:type" content="website"&gt;
+&lt;meta property="og:title" content="Acme Studio: Fast, accessible web projects"&gt;
+&lt;meta property="og:description" content="Acme Studio builds fast, accessible Flask web apps."&gt;
+&lt;meta property="og:url" content="https://example.com/"&gt;
+&lt;meta property="og:image" content="https://example.com/img/og-default.png"&gt;
+&lt;meta property="og:image:width" content="1200"&gt;
+&lt;meta property="og:image:height" content="630"&gt;
+&lt;meta property="og:image:alt" content="Acme Studio logo on a purple background"&gt;
+&lt;meta property="og:locale" content="en_US"&gt;</code></pre>
+  <h3>Choosing og:type</h3>
+  <ul>
+    <li><code>website</code> for the homepage and general pages.</li>
+    <li><code>article</code> for blog posts and guides. It unlocks <code>article:published_time</code>, <code>article:modified_time</code> and <code>article:author</code>.</li>
+    <li>Other valid types include <code>profile</code>, <code>video.other</code> and <code>music.song</code>.</li>
+  </ul>
+  <h3>Image best practices</h3>
+  <ul>
+    <li>Use <strong>1200 x 630 pixels</strong>, a 1.91:1 ratio. It works on every major platform.</li>
+    <li>Keep important content away from the edges, because some platforms crop to a square or a smaller ratio.</li>
+    <li>Use an <strong>absolute URL</strong> that is publicly reachable without logging in.</li>
+    <li>Keep the file under about 1 MB and use JPG or PNG. WebP is not supported everywhere.</li>
+    <li>Always supply <code>og:image:alt</code> for accessibility.</li>
+    <li>Give key pages their own image. A unique card for each article gets noticeably more clicks than a generic one.</li>
+  </ul>
+  <p>
+    Platforms cache previews aggressively. After changing an image, use the Facebook Sharing
+    Debugger or LinkedIn Post Inspector to force a refresh.
+  </p>
+
+  <h2 id="twitter">8. Twitter / X cards</h2>
+  <p>
+    X reads its own <code>twitter:*</code> tags and falls back to Open Graph for anything missing.
+    That means you only need one extra tag to get the large card, and the rest can come from your
+    Open Graph data.
+  </p>
+<pre><code>&lt;meta name="twitter:card" content="summary_large_image"&gt;
+&lt;meta name="twitter:site" content="@acmestudio"&gt;
+&lt;meta name="twitter:title" content="Acme Studio: Fast, accessible web projects"&gt;
+&lt;meta name="twitter:description" content="Acme Studio builds fast Flask web apps."&gt;
+&lt;meta name="twitter:image" content="https://example.com/img/og-default.png"&gt;</code></pre>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Card type</th><th>Looks like</th><th>Use for</th></tr></thead>
+      <tbody>
+        <tr><td><code>summary</code></td><td>Small square thumbnail beside text</td><td>Profiles, simple pages</td></tr>
+        <tr><td><code>summary_large_image</code></td><td>Wide image above the title</td><td>Articles, landing pages (recommended)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    The project repeats the title, description and image in the Twitter block so the card is
+    complete even if a scraper ignores Open Graph.
+  </p>
+
+  <h2 id="json-ld">9. Structured data (JSON-LD)</h2>
+  <p>
+    Structured data describes your content using the shared <a href="https://schema.org" rel="noopener">schema.org</a>
+    vocabulary. Search engines use it to understand what a page is and, in some cases, to show
+    rich results such as breadcrumbs, article details or sitelinks. JSON-LD is the format Google
+    recommends because it lives in a single script tag, separate from your markup.
+  </p>
+  <h3>Which types to use</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Type</th><th>Use on</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>Organization</code></td><td>Homepage</td><td>Connects your name, logo and site</td></tr>
+        <tr><td><code>WebSite</code></td><td>Homepage</td><td>Declares the site name and publisher</td></tr>
+        <tr><td><code>Article</code></td><td>Guides, blog posts</td><td>Headline, dates, author, image</td></tr>
+        <tr><td><code>BreadcrumbList</code></td><td>Any nested page</td><td>Shows the path in search results</td></tr>
+        <tr><td><code>AboutPage</code></td><td>About page</td><td>Clarifies what the page is</td></tr>
+        <tr><td><code>Product</code>, <code>Event</code>, <code>Recipe</code></td><td>Matching content</td><td>Enables type-specific rich results</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Example: Article with breadcrumbs</h3>
+<pre><code>&lt;script type="application/ld+json"&gt;
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "headline": "The complete guide to SEO meta tags in Flask",
+      "datePublished": "2026-10-26",
+      "dateModified": "2026-10-26",
+      "author": { "@type": "Organization", "name": "Acme Studio" },
+      "publisher": { "@id": "https://example.com/#org" },
+      "mainEntityOfPage": "https://example.com/guide/flask-seo-meta-tags",
+      "image": "https://example.com/img/og-default.png"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://example.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://example.com/guide/flask-seo-meta-tags" }
+      ]
+    }
+  ]
+}
+&lt;/script&gt;</code></pre>
+  <p>
+    The <code>@graph</code> array lets you describe several entities in one block, and the
+    <code>@id</code> references link them together. Here the article's publisher points to the
+    Organization defined on the homepage.
+  </p>
+  <h3>Rules for structured data</h3>
+  <ul>
+    <li><strong>Mark up only what users can see.</strong> Hidden or invented data can lead to a manual action.</li>
+    <li>Keep values in sync with the page. If the visible title changes, update <code>headline</code> too.</li>
+    <li>Use ISO 8601 dates such as <code>2026-10-26</code> or <code>2026-10-26T09:00:00+08:00</code>.</li>
+    <li>Use absolute URLs for images and links.</li>
+    <li>Generate it from Python dictionaries, not by hand. Flask's <code>tojson</code> filter handles quoting and escapes characters that could break out of the script tag.</li>
+  </ul>
+  <div class="callout">
+    <p><strong>A note on FAQ markup:</strong> <code>FAQPage</code> is still valid schema, but Google now shows FAQ rich results only for a small set of authoritative sites. Add it if it helps clarify your content, but do not expect expanded results.</p>
+  </div>
+
+  <h2 id="flask-setup">10. Setting it up in Flask</h2>
+  <p>
+    The pattern is simple: each route builds a small dictionary describing the page, passes it to
+    the template, and one shared partial turns that dictionary into tags. You write the tags once.
+  </p>
+  <h3>Step 1: define site-wide settings</h3>
+<pre><code>app.config["SITE"] = {
+    "name": "Acme Studio",
+    "url": site_url(),                 # from SITE_URL env var
+    "locale": "en_US",
+    "twitter": "@acmestudio",
+    "default_image": "/img/og-default.png",
+}</code></pre>
+  <h3>Step 2: describe each page in its route</h3>
+<pre><code>@app.route("/about")
+def about():
+    seo = {
+        "title": "About us",
+        "description": "Meet the team behind Acme Studio.",
+        "path": "/about",
+    }
+    return render_template("about.html", seo=seo)</code></pre>
+  <h3>Step 3: include the partial once, in the base template</h3>
+<pre><code>&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  {% include "_seo.html" %}
+  &lt;link rel="stylesheet" href="{{ url_for('static', filename='css/md3.css') }}"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  {% block content %}{% endblock %}
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+  <h3>Step 4 (optional): share defaults with a helper</h3>
+  <p>If many pages share the same values, a tiny helper keeps routes short and consistent.</p>
+<pre><code>def build_seo(**page):
+    defaults = {"type": "website", "robots": "index, follow, max-image-preview:large"}
+    return {**defaults, **page}
+
+@app.route("/pricing")
+def pricing():
+    return render_template("pricing.html", seo=build_seo(
+        title="Pricing",
+        description="Simple, transparent pricing for every team size.",
+        path="/pricing",
+    ))</code></pre>
+  <h3>Dynamic pages</h3>
+  <p>
+    For database-driven pages, build the dictionary from the record. The canonical path should
+    come from the record's slug, not from <code>request.full_path</code>, so query strings never
+    leak into it.
+  </p>
+<pre><code>@app.route("/posts/&lt;slug&gt;")
+def post(slug):
+    item = get_post_or_404(slug)
+    seo = build_seo(
+        title=item.title,
+        description=item.summary[:155],
+        path=f"/posts/{item.slug}",
+        type="article",
+        published=item.created.isoformat(),
+        modified=item.updated.isoformat(),
+        image=item.cover_url,
+    )
+    return render_template("post.html", seo=seo, post=item)</code></pre>
+  <h3>Understanding the partial</h3>
+  <ul>
+    <li><strong>Title:</strong> adds the brand suffix on every page except <code>/</code>.</li>
+    <li><strong>Canonical:</strong> <code>SITE_URL</code> plus <code>path</code>.</li>
+    <li><strong>Image:</strong> accepts a full URL or a site path, and turns paths into absolute URLs.</li>
+    <li><strong>Article tags:</strong> published only when <code>type</code> is <code>article</code>.</li>
+    <li><strong>JSON-LD:</strong> printed through <code>tojson</code>, only when a <code>schema</code> key is present.</li>
+    <li><strong>Escaping:</strong> Jinja2 autoescaping turns quotes and angle brackets in titles and descriptions into safe entities.</li>
+  </ul>
+
+  <h2 id="sitemap">11. Sitemap and robots.txt</h2>
+  <p>
+    Meta tags work page by page. The sitemap and <code>robots.txt</code> work for the whole site.
+    Together they help crawlers discover every page and understand what they may fetch.
+  </p>
+  <h3>robots.txt</h3>
+<pre><code>User-agent: *
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml</code></pre>
+  <p>
+    Serve it from the root of your domain. Add <code>Disallow:</code> lines only for areas that
+    should not be crawled at all, such as <code>/admin/</code>. The sitemap line is the important
+    part, because it tells every crawler where to look.
+  </p>
+  <h3>sitemap.xml</h3>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/&lt;/loc&gt;
+    &lt;lastmod&gt;2026-10-26&lt;/lastmod&gt;
+  &lt;/url&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/guide/flask-seo-meta-tags&lt;/loc&gt;
+    &lt;lastmod&gt;2026-10-26&lt;/lastmod&gt;
+  &lt;/url&gt;
+&lt;/urlset&gt;</code></pre>
+  <ul>
+    <li>List only <strong>canonical, indexable</strong> URLs. Never include redirects, 404s or <code>noindex</code> pages.</li>
+    <li>Keep <code>lastmod</code> honest. Update it only when the content really changes.</li>
+    <li>A single sitemap can hold 50,000 URLs or 50 MB uncompressed. Beyond that, split into several files and add a sitemap index.</li>
+    <li>Submit the sitemap in Google Search Console and Bing Webmaster Tools.</li>
+  </ul>
+  <p>
+    The starter project generates both files from the same page dictionaries that feed your
+    meta tags, so the sitemap cannot drift out of sync with the pages. When you add a route, add
+    its SEO function to the list in <code>sitemap()</code>.
+  </p>
+
+  <h2 id="vercel">12. Deploying on Vercel</h2>
+  <p>
+    The project is structured to deploy on Vercel with no extra configuration. A few details
+    matter for SEO specifically.
+  </p>
+  <ul>
+    <li><strong>Set SITE_URL.</strong> Add it under Project Settings, then Environment Variables, for example <code>https://example.com</code>. Without it, the app falls back to Vercel's production domain.</li>
+    <li><strong>Static files go in public/.</strong> Vercel serves them from its CDN, so your OG image, favicon and CSS are fast and cached.</li>
+    <li><strong>Keep previews out of search.</strong> Every branch and pull request gets its own preview URL. The app sends an <code>X-Robots-Tag: noindex, nofollow</code> header whenever <code>VERCEL_ENV</code> is <code>preview</code> or <code>development</code>.</li>
+    <li><strong>Redirect duplicates.</strong> Choose www or non-www as primary in the Domains settings and let Vercel redirect the other one to it.</li>
+    <li><strong>HTTPS is automatic</strong>, so canonical URLs should always start with <code>https://</code>.</li>
+  </ul>
+
+  <h2 id="mistakes">13. Common mistakes</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Mistake</th><th>Why it hurts</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Same title on every page</td><td>Pages compete and look identical in results</td><td>Generate titles per route</td></tr>
+        <tr><td>Relative URLs in canonical or og:image</td><td>Scrapers cannot resolve them</td><td>Always use absolute URLs</td></tr>
+        <tr><td>Canonical includes query strings</td><td>Splits ranking signals</td><td>Build from a clean path</td></tr>
+        <tr><td>Blocking a page in robots.txt and adding noindex</td><td>Crawler never sees the noindex</td><td>Allow crawling, use noindex</td></tr>
+        <tr><td>Leaving noindex on after launch</td><td>The whole site disappears from search</td><td>Check the live HTML before and after release</td></tr>
+        <tr><td>Generic social image everywhere</td><td>Lower click-through on shared links</td><td>Create a card per key page</td></tr>
+        <tr><td>Structured data that does not match the page</td><td>Can trigger a manual action</td><td>Generate it from the same data as the page</td></tr>
+        <tr><td>Staging site indexed</td><td>Duplicate content and leaked drafts</td><td>Noindex previews with a header</td></tr>
+        <tr><td>Title stuffed with keywords</td><td>Looks spammy and may be rewritten</td><td>Write one clear, natural headline</td></tr>
+        <tr><td>Forgetting the viewport tag</td><td>Fails mobile-friendly checks</td><td>Keep it in the shared partial</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="testing">14. Testing and validation</h2>
+  <p>
+    Never assume the tags are right because the template compiled. Check what the server actually
+    sends, then check what each platform actually shows.
+  </p>
+  <h3>Inspect the HTML yourself</h3>
+<pre><code>curl -s https://example.com/about | grep -Ei "&lt;title|description|canonical|og:|twitter:"</code></pre>
+  <p>Also check response headers to confirm the preview-protection header is absent in production:</p>
+<pre><code>curl -sI https://example.com/ | grep -i x-robots-tag</code></pre>
+  <h3>Write an automated test</h3>
+  <p>A few lines in your test suite will catch a missing canonical or duplicate title before it ships.</p>
+<pre><code>def test_every_page_has_core_seo(client):
+    for path in ["/", "/about", "/guide/flask-seo-meta-tags"]:
+        html = client.get(path).get_data(as_text=True)
+        assert "&lt;title&gt;" in html
+        assert 'name="description"' in html
+        assert 'rel="canonical"' in html
+        assert 'property="og:image"' in html</code></pre>
+  <h3>External tools</h3>
+  <ul>
+    <li><strong>Google Search Console:</strong> URL Inspection shows the rendered HTML, the selected canonical and indexing status. Submit your sitemap here.</li>
+    <li><strong>Google Rich Results Test:</strong> validates JSON-LD and shows which rich results a page is eligible for.</li>
+    <li><strong>Schema Markup Validator (validator.schema.org):</strong> checks syntax against schema.org without Google-specific rules.</li>
+    <li><strong>Facebook Sharing Debugger:</strong> previews Open Graph and clears Facebook's cache.</li>
+    <li><strong>LinkedIn Post Inspector:</strong> same for LinkedIn.</li>
+    <li><strong>Lighthouse:</strong> the SEO category flags missing titles, descriptions, viewport tags and non-crawlable links.</li>
+  </ul>
+
+  <h2 id="checklist">15. Pre-launch checklist</h2>
+  <p>Run through this before every release that adds or changes pages.</p>
+  <ul class="checklist">
+    <li>Every indexable page has a unique title of about 50-60 characters.</li>
+    <li>Every indexable page has a unique description of about 120-160 characters.</li>
+    <li>Canonical URLs are absolute, self-referencing and free of query strings.</li>
+    <li><code>SITE_URL</code> is set to the real production domain.</li>
+    <li>Private, error and utility pages carry <code>noindex</code>.</li>
+    <li>No leftover <code>noindex</code> on pages that should rank.</li>
+    <li>The OG image exists at 1200 x 630 and loads over HTTPS without login.</li>
+    <li>Open Graph and Twitter tags render correctly in the sharing debuggers.</li>
+    <li>JSON-LD validates with no errors and matches the visible content.</li>
+    <li><code>/robots.txt</code> and <code>/sitemap.xml</code> load and list only indexable URLs.</li>
+    <li>The sitemap is submitted in Search Console.</li>
+    <li>The page has one <code>h1</code>, a logical heading order and <code>lang</code> set on the html tag.</li>
+    <li>Favicon and apple-touch-icon load without errors.</li>
+    <li>Preview deployments return the noindex header.</li>
+  </ul>
+
+  <h2 id="faq">16. Frequently asked questions</h2>
+  <div class="faq">
+    <details>
+      <summary>Do I need to repeat meta tags on every page?</summary>
+      <p>You need them on every page, but you should not write them by hand. The shared partial renders them from one dictionary per route, so the markup lives in a single file.</p>
+    </details>
+    <details>
+      <summary>Is the meta keywords tag worth adding?</summary>
+      <p>No. Major search engines ignore it. It is harmless, but your time is better spent on titles, descriptions and content.</p>
+    </details>
+    <details>
+      <summary>Why does Google show a different title or description than mine?</summary>
+      <p>Search engines rewrite them when they think another piece of text better matches the query, or when yours is too long, too short or repetitive. Clear, accurate, unique text is rewritten less often.</p>
+    </details>
+    <details>
+      <summary>Do Open Graph tags affect rankings?</summary>
+      <p>Not directly. They control link previews, which can increase clicks and shares, and shares can bring visibility and links indirectly.</p>
+    </details>
+    <details>
+      <summary>Should the canonical point to itself?</summary>
+      <p>Yes. A self-referencing canonical on every indexable page is the recommended default, because it protects against parameter and tracking variations.</p>
+    </details>
+    <details>
+      <summary>Can I use relative URLs for og:image?</summary>
+      <p>No. Social scrapers do not resolve relative paths reliably. Use full URLs. The partial in this project converts site paths to absolute URLs for you.</p>
+    </details>
+    <details>
+      <summary>How long until changes show up in search?</summary>
+      <p>It can take from a few days to a few weeks. Request indexing for key pages in Search Console and keep your sitemap's <code>lastmod</code> accurate to speed things up.</p>
+    </details>
+    <details>
+      <summary>Does this work without Vercel?</summary>
+      <p>Yes. The partial and the dictionaries are plain Flask and Jinja2. Only the <code>public/</code> folder and the preview header are Vercel-oriented, and both are harmless elsewhere.</p>
+    </details>
+    <details>
+      <summary>How do I handle multiple languages?</summary>
+      <p>Give each language its own URL, make each page canonical to itself, and add <code>hreflang</code> link tags that list every language version, including a reciprocal link back from each one. The partial can be extended with an <code>alternates</code> list for this.</p>
+    </details>
+  </div>
+
+  <h2 id="next">Next steps</h2>
+  <p>
+    Copy <code>_seo.html</code> into your project, set <code>SITE_URL</code>, describe your pages
+    with a dictionary each, and run the checklist above. If you want to see the finished result,
+    visit the <a href="/">homepage</a> and the <a href="/about">about page</a>, then view source
+    to compare the tags with this guide.
+  </p>
+{% endraw %}
 </article>
 {% endblock %}
