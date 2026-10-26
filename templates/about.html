@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not_found %}
+<section class="hero">
+  <h1 class="display">Page not found</h1>
+  <p class="lead">That page doesn't exist.</p>
+  <a class="btn btn-filled" href="{{ url_for('home') }}">Back home</a>
+</section>
+{% else %}
+<section class="hero">
+  <h1 class="display">About {{ config.SITE.name }}</h1>
+  <p class="lead">We build fast, accessible and search-friendly websites.</p>
+</section>
+
+<section class="grid">
+  <article class="card card-filled">
+    <h2>Our mission</h2>
+    <p>Make good SEO the default for every Flask project, not an afterthought.</p>
+  </article>
+  <article class="card card-outlined">
+    <h2>Our approach</h2>
+    <p>Semantic HTML, honest metadata and lightweight Material Design 3 styling.</p>
+  </article>
+</section>
+{% endif %}
+{% endblock %}

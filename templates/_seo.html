@@ -1,0 +1,59 @@
+{#
+  _seo.html — copy-paste SEO head block for Flask + Jinja2.
+  Usage: {% include "_seo.html" %} inside <head>, with a `seo` dict in the context.
+  Required keys: title, description, path
+  Optional keys: image, type ("website"|"article"), robots, published, modified,
+                 author, keywords, schema (dict -> JSON-LD)
+#}
+{%- set site = config.SITE -%}
+{%- set full_title = seo.title ~ " | " ~ site.name if seo.path != "/" else seo.title -%}
+{%- set canonical = site.url ~ seo.path -%}
+{%- set image = (seo.image or site.default_image) -%}
+{%- set image_url = image if image.startswith("http") else site.url ~ image -%}
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Primary -->
+<title>{{ full_title }}</title>
+<meta name="description" content="{{ seo.description }}">
+{% if seo.keywords %}<meta name="keywords" content="{{ seo.keywords }}">{% endif %}
+<meta name="author" content="{{ seo.author or site.name }}">
+<meta name="robots" content="{{ seo.robots or 'index, follow, max-image-preview:large' }}">
+<link rel="canonical" href="{{ canonical }}">
+
+<!-- Theme / icons -->
+<meta name="theme-color" content="#6750A4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+
+<!-- Open Graph (Facebook, LinkedIn, Discord, WhatsApp) -->
+<meta property="og:site_name" content="{{ site.name }}">
+<meta property="og:type" content="{{ seo.type or 'website' }}">
+<meta property="og:title" content="{{ full_title }}">
+<meta property="og:description" content="{{ seo.description }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:image" content="{{ image_url }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ seo.image_alt or full_title }}">
+<meta property="og:locale" content="{{ site.locale }}">
+{% if seo.type == 'article' %}
+{% if seo.published %}<meta property="article:published_time" content="{{ seo.published }}">{% endif %}
+{% if seo.modified %}<meta property="article:modified_time" content="{{ seo.modified }}">{% endif %}
+<meta property="article:author" content="{{ seo.author or site.name }}">
+{% endif %}
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+{% if site.twitter %}<meta name="twitter:site" content="{{ site.twitter }}">{% endif %}
+<meta name="twitter:title" content="{{ full_title }}">
+<meta name="twitter:description" content="{{ seo.description }}">
+<meta name="twitter:image" content="{{ image_url }}">
+
+<!-- Structured data (JSON-LD) -->
+{% if seo.schema %}
+<script type="application/ld+json">{{ seo.schema | tojson }}</script>
+{% endif %}

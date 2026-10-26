@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1 class="display">Web projects that search engines understand</h1>
+  <p class="lead">Copy-paste SEO for Flask, built on Material Design 3.</p>
+  <div class="actions">
+    <a class="btn btn-filled" href="{{ url_for('content') }}">Read the guide</a>
+    <a class="btn btn-tonal" href="{{ url_for('about') }}">About us</a>
+  </div>
+</section>
+
+<section class="grid" aria-labelledby="features">
+  <h2 id="features" class="section-title">What you get</h2>
+
+  <article class="card card-elevated">
+    <h3>One include</h3>
+    <p>Drop <code>_seo.html</code> into your <code>&lt;head&gt;</code> and pass a <code>seo</code> dict.</p>
+  </article>
+  <article class="card card-filled">
+    <h3>Social previews</h3>
+    <p>Open Graph and Twitter card tags generated from the same data.</p>
+  </article>
+  <article class="card card-outlined">
+    <h3>Structured data</h3>
+    <p>JSON-LD for Organization, WebSite, Article and AboutPage.</p>
+  </article>
+</section>
+{% endblock %}

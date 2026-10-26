@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('home') }}">Home</a> / <span>Guide</span>
+  </nav>
+
+  <h1 class="headline">How to add SEO meta tags to a Flask app</h1>
+  <p class="meta">
+    By {{ seo.author }} &middot;
+    <time datetime="{{ seo.published }}">{{ seo.published }}</time>
+  </p>
+
+  <p class="lead">
+    Every page needs a unique title, description and canonical URL. Flask makes this easy
+    when the values live in one dictionary and one template partial renders them.
+  </p>
+
+  <h2>1. Describe the page</h2>
+  <p>Create a <code>seo</code> dict in your route and pass it to <code>render_template</code>.</p>
+<pre><code>return render_template("home.html", seo={
+    "title": "My page",
+    "description": "A 120-155 character summary.",
+    "path": "/my-page",
+})</code></pre>
+
+  <h2>2. Include the partial</h2>
+  <p>Add <code>{% raw %}{% include "_seo.html" %}{% endraw %}</code> inside <code>&lt;head&gt;</code> of your base template.</p>
+
+  <h2>3. Add structured data</h2>
+  <p>Pass a <code>schema</code> dict and the partial emits it as JSON-LD.</p>
+
+  <h2>4. Publish a sitemap</h2>
+  <p>Serve <code>/sitemap.xml</code> and <code>/robots.txt</code> so crawlers can find every page.</p>
+</article>
+{% endblock %}
