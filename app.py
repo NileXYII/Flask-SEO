@@ -69,25 +69,38 @@ def seo_home():
 
 
 def seo_content():
+    url = f"{SITE['url']}/guide/flask-seo-meta-tags"
     return {
-        "title": "How to add SEO meta tags to a Flask app",
-        "description": "A practical guide to title tags, canonical URLs, Open Graph, Twitter cards "
-        "and JSON-LD in Flask and Jinja2, with copy-paste code.",
+        "title": "The complete guide to SEO meta tags in Flask",
+        "description": "Learn every SEO meta tag a Flask site needs: titles, descriptions, canonicals, "
+        "robots, Open Graph, Twitter cards and JSON-LD, with copy-paste code.",
         "path": "/guide/flask-seo-meta-tags",
         "type": "article",
         "published": "2026-10-26",
         "modified": "2026-10-26",
-        "author": "Acme Studio",
+        "author": SITE["name"],
+        "keywords": "flask seo, meta tags, open graph, canonical url, json-ld, jinja2",
         "schema": {
             "@context": "https://schema.org",
-            "@type": "Article",
-            "headline": "How to add SEO meta tags to a Flask app",
-            "datePublished": "2026-10-26",
-            "dateModified": "2026-10-26",
-            "author": {"@type": "Organization", "name": SITE["name"]},
-            "publisher": {"@id": f"{SITE['url']}/#org"},
-            "mainEntityOfPage": f"{SITE['url']}/guide/flask-seo-meta-tags",
-            "image": f"{SITE['url']}{SITE['default_image']}",
+            "@graph": [
+                {
+                    "@type": "Article",
+                    "headline": "The complete guide to SEO meta tags in Flask",
+                    "datePublished": "2026-10-26",
+                    "dateModified": "2026-10-26",
+                    "author": {"@type": "Organization", "name": SITE["name"]},
+                    "publisher": {"@id": f"{SITE['url']}/#org"},
+                    "mainEntityOfPage": url,
+                    "image": f"{SITE['url']}{SITE['default_image']}",
+                },
+                {
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE["url"] + "/"},
+                        {"@type": "ListItem", "position": 2, "name": "Guide", "item": url},
+                    ],
+                },
+            ],
         },
     }
 
@@ -111,6 +124,14 @@ def seo_about():
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+@app.after_request
+def keep_previews_out_of_search(resp):
+    """Vercel preview/dev deployments must never be indexed."""
+    if os.environ.get("VERCEL_ENV") in ("preview", "development"):
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
+
+
 @app.route("/")
 def home():
     return render_template("home.html", seo=seo_home())
